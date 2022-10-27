@@ -130,7 +130,6 @@ function generateHtml($eventResult){
     return $html
 }
 
-    Out-Printer 
 function print-google-calendar-itinerary($targetEmail, $certPath, $certPassword, $serviceAccount, $printerName){
     if($null -eq (Get-Module -Name UMN-Google)){
         Install-Module UMN-Google
