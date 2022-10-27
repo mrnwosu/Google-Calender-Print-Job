@@ -126,22 +126,57 @@ function generateHtml($eventResult){
     return $html
 }
 
-function print-google-calendar-itinerary($targetEmail, $certPath, $certPassword, [string]$serviceAccount, $printerName){
+function printHtmlViaIE($fileName){
+    Write-Host "Starting IE"
+    $ie = new-object -com "InternetExplorer.Application"
+
+
+    Write-Host "Navigating to $fileName"
+    $ie.Navigate($fileName)
+    while ( $ie.busy ) { Start-Sleep -Seconds 3 }
+
+    Write-Host "Executing Print"
+    $ie.ExecWB(6,2)
+    while ( $ie.busy ) { Start-Sleep -Seconds 3 }
+
+    Write-Host "Waiting for print to send "
+    Start-Sleep -Seconds 5
+    $ie.quit()
+}
+
+function print-google-calendar-itinerary($targetEmail, $certPath, $certPassword, [string]$serviceAccount){
     if($null -eq (Get-Module -Name UMN-Google)){
-        Install-Module UMN-Google
+        Write-Host "Installing Module UMN-Google"
+        Install-Module UMN-Google -Force
     }
 
+    Write-Host "Target Email Is $targetEmail"
     $email = $targetEmail
+
+    Write-Host "Authenticating"
     $token = auth `
         -certPath $certPath `
         -certPassword $certPassword `
         -serviceAccount $serviceAccount.Trim()
 
+    Write-Host "Authenticated"
+
+    Write-Host "Getting Events"
     $eventResult = getTodaysEvents -token $token -email $email
-    $generatedHtml = generateHtml -eventResult $eventResult 
+    Write-Host "Events Retrieved"
+
+    Write-Host "Generating HTML"
+    $generatedHtml = generateHtml -eventResult $eventResult
+    Write-Host "HTML Generated "
+
     $todaysDateString = Get-Date -Format "MMMM-dd-yyyy"
     $fileName = "$todaysDateString.html"
     $fullFileName = Join-Path (pwd) $fileName
+
+    Write-Host "Itinerary Report is here: $fullFileName"
     $generatedHtml | Out-File $fullFileName
-    Get-Content -Path $fullFileName | Out-Printer -Name $printerName
+
+    Write-Host "Printing to Default printer with Internet Explorer..."
+    printHtmlViaIE -fileName $fullFileName
+    Write-Host "Printed"
 }
