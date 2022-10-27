@@ -5,11 +5,7 @@ function auth($certPath, $certPassword, $serviceAccount){
         return $accessToken
     } 
     catch {
-        $err = $item_.Exception
-        $err | Select-Object -Property *
-        "Response: "
-        $err.Response
-        throw $err
+        throw $PSItem
     }
 }
 
@@ -130,7 +126,7 @@ function generateHtml($eventResult){
     return $html
 }
 
-function print-google-calendar-itinerary($targetEmail, $certPath, $certPassword, $serviceAccount, $printerName){
+function print-google-calendar-itinerary($targetEmail, $certPath, $certPassword, [string]$serviceAccount, $printerName){
     if($null -eq (Get-Module -Name UMN-Google)){
         Install-Module UMN-Google
     }
@@ -139,7 +135,7 @@ function print-google-calendar-itinerary($targetEmail, $certPath, $certPassword,
     $token = auth `
         -certPath $certPath `
         -certPassword $certPassword `
-        -serviceAccount $serviceAccount
+        -serviceAccount $serviceAccount.Trim()
 
     $eventResult = getTodaysEvents -token $token -email $email
     $generatedHtml = generateHtml -eventResult $eventResult 
