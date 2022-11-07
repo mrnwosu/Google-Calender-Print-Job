@@ -25,11 +25,9 @@ function getEventHtmlList($items){
     $list = New-Object Collections.Generic.List[string]
     $items | Sort-Object -Property @{Expression={$_.start.datetime}} | ForEach-Object {
         $html = "<div class=""event-wrapper"">"
-        $isAllDay = $false
         $time = ""
 
         if($null -ne $_.start.date){
-            $isAllDay = $true
             $time = "All Day"
         }
         else{
@@ -127,56 +125,76 @@ function generateHtml($eventResult){
 }
 
 function printHtmlViaIE($fileName){
-    Write-Host "Starting IE"
+    log "Starting IE"
     $ie = new-object -com "InternetExplorer.Application"
 
-
-    Write-Host "Navigating to $fileName"
+    log "Navigating to $fileName"
     $ie.Navigate($fileName)
     while ( $ie.busy ) { Start-Sleep -Seconds 3 }
 
-    Write-Host "Executing Print"
+    log "Executing Print"
     $ie.ExecWB(6,2)
     while ( $ie.busy ) { Start-Sleep -Seconds 3 }
 
-    Write-Host "Waiting for print to send "
+    log "Waiting for print to send "
     Start-Sleep -Seconds 5
     $ie.quit()
 }
 
 function print-google-calendar-itinerary($targetEmail, $certPath, $certPassword, [string]$serviceAccount){
-    if($null -eq (Get-Module -Name UMN-Google)){
-        Write-Host "Installing Module UMN-Google"
-        Install-Module UMN-Google -Force
+    try{
+        if($null -eq (Get-Module -Name UMN-Google)){
+            log "Installing Module UMN-Google"
+            Install-Module UMN-Google -Force
+        }
+
+        log "Target Email Is $targetEmail"
+        $email = $targetEmail
+
+        log "Authenticating"
+        $token = auth `
+            -certPath $certPath `
+            -certPassword $certPassword `
+            -serviceAccount $serviceAccount.Trim()
+
+        log "Authenticated"
+
+        log "Getting Events"
+        $eventResult = getTodaysEvents -token $token -email $email
+        log "Events Retrieved"
+        $eventCount = $eventResult.items.Count
+        log "There are $eventCount(s) scheduled for today."
+
+        log "Generating HTML"
+        $generatedHtml = generateHtml -eventResult $eventResult
+        log "HTML Generated "
+
+        $todaysDateString = Get-Date -Format "MMMM-dd-yyyy"
+        $fileName = "$todaysDateString.html"
+        $fullFileName = Join-Path (pwd) $fileName
+
+        log "Itinerary Report is here: $fullFileName"
+        $generatedHtml | Out-File $fullFileName
+
+        log "Printing to Default printer with Internet Explorer..."
+        printHtmlViaIE -fileName $fullFileName
+        log "Printed"
     }
+    catch{
+        log "An error occurred:"
+        log -message $_ -level "ERROR"
+    }
+}
 
-    Write-Host "Target Email Is $targetEmail"
-    $email = $targetEmail
-
-    Write-Host "Authenticating"
-    $token = auth `
-        -certPath $certPath `
-        -certPassword $certPassword `
-        -serviceAccount $serviceAccount.Trim()
-
-    Write-Host "Authenticated"
-
-    Write-Host "Getting Events"
-    $eventResult = getTodaysEvents -token $token -email $email
-    Write-Host "Events Retrieved"
-
-    Write-Host "Generating HTML"
-    $generatedHtml = generateHtml -eventResult $eventResult
-    Write-Host "HTML Generated "
-
-    $todaysDateString = Get-Date -Format "MMMM-dd-yyyy"
-    $fileName = "$todaysDateString.html"
-    $fullFileName = Join-Path (pwd) $fileName
-
-    Write-Host "Itinerary Report is here: $fullFileName"
-    $generatedHtml | Out-File $fullFileName
-
-    Write-Host "Printing to Default printer with Internet Explorer..."
-    printHtmlViaIE -fileName $fullFileName
-    Write-Host "Printed"
+function log($message, $level = 'INFO'){
+    $time = (Get-Date -Format "MM-dd-yy hh:mmtt")
+    $log = "$time - $level - $message"
+    
+    if ($level -eq "ERROR") {
+        Write-Error $log
+    }
+    else{
+        Write-Host $log
+    }    
+    Add-Content job.log $log
 }
