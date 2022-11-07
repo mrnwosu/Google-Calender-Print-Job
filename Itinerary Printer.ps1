@@ -184,6 +184,10 @@ function print-google-calendar-itinerary($targetEmail, $certPath, $certPassword,
         log "An error occurred:"
         log -message $_ -level "ERROR"
     }
+    finally{
+        $cwd = (pwd)
+        log "Logging file is located at ""$cwd\job.log"""
+    }
 }
 
 function log($message, $level = 'INFO'){
