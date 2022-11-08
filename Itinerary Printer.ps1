@@ -31,7 +31,7 @@ function getEventHtmlList($items){
             $time = "All Day"
         }
         else{
-            $time = $_.start.datetime.ToString("hh:mm:tt") 
+            $time = ([DateTime]$_.start.datetime).ToString("hh:mm:tt")
         }
         
         $description = $_.description
