@@ -23,7 +23,7 @@ function getTodaysEvents($token, $email){
 
 function getEventHtmlList($items){
     $list = New-Object Collections.Generic.List[string]
-    $items | Sort-Object -Property @{Expression={$_.start.datetime}} | ForEach-Object {
+    $items | Sort-Object -Property @{Expression={If ($Null -eq $_.start.datetime) {$Null} Else {[DateTime]$_.start.datetime}}} | ForEach-Object {
         $html = "<div class=""event-wrapper"">"
         $time = ""
 
